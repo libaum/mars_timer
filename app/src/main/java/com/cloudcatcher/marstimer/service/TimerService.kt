@@ -34,6 +34,14 @@ class TimerService : LifecycleService() {
     private val _remainingTime = MutableStateFlow(0L)
     val remainingTime: StateFlow<Long> get() = _remainingTime
 
+    // Track if pause happened during prep phase (before any meditation elapsed)
+    private val _wasPausedDuringPrep = MutableStateFlow(false)
+    val wasPausedDuringPrep: StateFlow<Boolean> get() = _wasPausedDuringPrep
+
+    // Track meditation start time for elapsed calculation
+    private var meditationStartTime: Long = 0L
+    private var totalMeditationTimeMs: Long = 0L
+
     override fun onBind(intent: Intent): IBinder {
         super.onBind(intent)
         return binder
@@ -56,38 +64,78 @@ class TimerService : LifecycleService() {
 
     fun startTimer(meditationTime: Long, prepTime: Long) {
         acquireWakeLock()
-        _timerState.value = TimerViewModel.TimerState.PREP
+        
+        timerJob?.cancel()
+        _wasPausedDuringPrep.value = false
+        totalMeditationTimeMs = meditationTime * 1000L
+        
         timerJob = lifecycleScope.launch {
             // Prep Time
-            var time = prepTime
-            while (time > 0) {
-                while (_timerState.value == TimerViewModel.TimerState.PAUSED) {
+            if (prepTime > 0) {
+                _timerState.value = TimerViewModel.TimerState.PREP
+                var prepTarget = android.os.SystemClock.elapsedRealtime() + (prepTime * 1000L)
+                while (true) {
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    var remaining = prepTarget - now
+                    
+                    // Revert to <= 0 as we use ceiling rounding for display now
+                    if (remaining <= 0) break
+                    
+                    // Handle Pause inside Prep
+                    if (_timerState.value == TimerViewModel.TimerState.PAUSED) {
+                        _wasPausedDuringPrep.value = true
+                        val pauseStart = android.os.SystemClock.elapsedRealtime()
+                        while (_timerState.value == TimerViewModel.TimerState.PAUSED) {
+                            delay(100)
+                        }
+                        if (_timerState.value == TimerViewModel.TimerState.FINISHED) return@launch
+                        val pauseDuration = android.os.SystemClock.elapsedRealtime() - pauseStart
+                        prepTarget += pauseDuration
+                        remaining = prepTarget - android.os.SystemClock.elapsedRealtime()
+                    }
+
+                    if (_timerState.value == TimerViewModel.TimerState.FINISHED) return@launch
+                    
+                    _remainingTime.value = remaining
+                    updateNotification(remaining)
                     delay(100)
                 }
-                if (_timerState.value == TimerViewModel.TimerState.FINISHED) return@launch
-
-                _remainingTime.value = time * 1000L
-                updateNotification(time * 1000L)
-                delay(1000)
-                time--
             }
 
-            // Play Sound logic (Start of Meditation)
+            // Play Sound immediately (Start of Meditation) - no delay after prep ends
             playSound()
 
-            // Meditation Time
+            // Meditation Time - immediately after prep, no extra tick
             _timerState.value = TimerViewModel.TimerState.RUNNING
-            time = meditationTime
-            while (time > 0) {
-                 while (_timerState.value == TimerViewModel.TimerState.PAUSED) {
-                    delay(100)
+            _wasPausedDuringPrep.value = false // Reset: we are now in meditation
+            meditationStartTime = android.os.SystemClock.elapsedRealtime()
+            var targetTime = meditationStartTime + (meditationTime * 1000L)
+            
+            while (true) {
+                 val now = android.os.SystemClock.elapsedRealtime()
+                 var remaining = targetTime - now
+
+                 if (remaining <= 0) {
+                     _remainingTime.value = 0
+                     break
+                 }
+
+                 if (_timerState.value == TimerViewModel.TimerState.PAUSED) {
+                    val pauseStart = android.os.SystemClock.elapsedRealtime()
+                    while (_timerState.value == TimerViewModel.TimerState.PAUSED) {
+                        delay(100)
+                    }
+                    if (_timerState.value == TimerViewModel.TimerState.FINISHED) return@launch
+                    val pauseDuration = android.os.SystemClock.elapsedRealtime() - pauseStart
+                    targetTime += pauseDuration
+                    remaining = targetTime - android.os.SystemClock.elapsedRealtime()
                 }
+
                 if (_timerState.value == TimerViewModel.TimerState.FINISHED) return@launch
 
-                _remainingTime.value = time * 1000L
-                updateNotification(time * 1000L)
-                delay(1000)
-                time--
+                _remainingTime.value = remaining
+                updateNotification(remaining)
+                delay(200) 
             }
 
             // Play Sound logic (End of Meditation)
@@ -115,6 +163,11 @@ class TimerService : LifecycleService() {
     fun pauseTimer() {
         if (_timerState.value == TimerViewModel.TimerState.RUNNING || _timerState.value == TimerViewModel.TimerState.PREP) {
             previousState = _timerState.value
+            // Synchronously mark as paused during prep BEFORE changing state to PAUSED
+            // This prevents the UI from flickering the Save button
+            if (previousState == TimerViewModel.TimerState.PREP) {
+                _wasPausedDuringPrep.value = true
+            }
             _timerState.value = TimerViewModel.TimerState.PAUSED
         }
     }
@@ -205,8 +258,10 @@ class TimerService : LifecycleService() {
     }
 
     private fun formatTime(millis: Long): String {
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(minutes)
+        // Round up to the nearest second to show "5" for [5000, 4001] range
+        val roundedMillis = if (millis > 0) millis + 999 else 0
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(roundedMillis)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(roundedMillis) - TimeUnit.MINUTES.toSeconds(minutes)
         return String.format("%02d:%02d", minutes, seconds)
     }
 }

@@ -20,7 +20,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-class TimerViewModel(private val dao: MeditationSessionDao) : ViewModel() {
+import com.cloudcatcher.marstimer.UserPreferencesRepository
+import kotlinx.coroutines.flow.first
+
+class TimerViewModel(
+    private val dao: MeditationSessionDao,
+    private val userPreferences: UserPreferencesRepository
+) : ViewModel() {
 
     enum class TimerState {
         IDLE,
@@ -40,6 +46,17 @@ class TimerViewModel(private val dao: MeditationSessionDao) : ViewModel() {
 
     val sessionHistory: StateFlow<List<MeditationSession>> = dao.getAllSessions()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            val lastDuration = userPreferences.lastDuration.first()
+            val initialDuration = if (lastDuration > 0) lastDuration else 20
+            _uiState.value = _uiState.value.copy(
+                meditationTime = initialDuration,
+                remainingTime = initialDuration * 60 * 1000L
+            )
+        }
+    }
 
 
 
@@ -66,6 +83,11 @@ class TimerViewModel(private val dao: MeditationSessionDao) : ViewModel() {
             viewModelScope.launch {
                 timerService?.remainingTime?.collectLatest { time ->
                     _uiState.value = _uiState.value.copy(remainingTime = time)
+                }
+            }
+            viewModelScope.launch {
+                timerService?.wasPausedDuringPrep?.collectLatest { wasDuringPrep ->
+                    _uiState.value = _uiState.value.copy(wasPausedDuringPrep = wasDuringPrep)
                 }
             }
         }
@@ -130,14 +152,46 @@ class TimerViewModel(private val dao: MeditationSessionDao) : ViewModel() {
         }
     }
 
-    fun incrementMeditationTime() {
-        val newTime = _uiState.value.meditationTime + 1
+    fun savePartialSession() {
+        if (isBound) {
+            val totalScheduled = _uiState.value.meditationTime * 60L // seconds
+            // We need to know explicitly the remaining time from the Service, but uiState.remainingTime should have it (updated by flow).
+            // But uiState.remainingTime is in millis.
+            val remainingSeconds = (_uiState.value.remainingTime / 1000)
+            val elapsedSeconds = (totalScheduled - remainingSeconds).coerceAtLeast(0)
+
+            if (elapsedSeconds > 0) {
+                 val session = MeditationSession(
+                    date = System.currentTimeMillis(),
+                    duration = elapsedSeconds
+                )
+                viewModelScope.launch {
+                    dao.insertSession(session)
+                }
+            }
+            stopTimer()
+        }
+    }
+
+    fun setMeditationTime(minutes: Int) {
+        val newTime = minutes.coerceIn(1, 180) // Cap at reasonable limits
         _uiState.value = _uiState.value.copy(meditationTime = newTime, remainingTime = newTime * 60 * 1000L)
+        saveMeditationTime(newTime)
+    }
+
+    private fun saveMeditationTime(minutes: Int) {
+        viewModelScope.launch {
+            userPreferences.saveLastDuration(minutes)
+        }
+    }
+
+    // Refactored increment/decrement to use setMeditationTime
+    fun incrementMeditationTime() {
+        setMeditationTime(_uiState.value.meditationTime + 1)
     }
 
     fun decrementMeditationTime() {
-        val newTime = (_uiState.value.meditationTime - 1).coerceAtLeast(1)
-        _uiState.value = _uiState.value.copy(meditationTime = newTime, remainingTime = newTime * 60 * 1000L)
+        setMeditationTime(_uiState.value.meditationTime - 1)
     }
 
     fun incrementPrepTime() {
@@ -149,19 +203,23 @@ class TimerViewModel(private val dao: MeditationSessionDao) : ViewModel() {
     }
 }
 
-class TimerViewModelFactory(private val dao: MeditationSessionDao) : ViewModelProvider.Factory {
+class TimerViewModelFactory(
+    private val dao: MeditationSessionDao,
+    private val userPreferences: UserPreferencesRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TimerViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return TimerViewModel(dao) as T
+            return TimerViewModel(dao, userPreferences) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
 data class TimerUiState(
-    val meditationTime: Int = 15, // in minutes
+    val meditationTime: Int = 20, // in minutes
     val prepTime: Int = 0, // in seconds
     val remainingTime: Long = meditationTime * 60 * 1000L,
-    val timerState: TimerViewModel.TimerState = TimerViewModel.TimerState.IDLE
+    val timerState: TimerViewModel.TimerState = TimerViewModel.TimerState.IDLE,
+    val wasPausedDuringPrep: Boolean = false
 )

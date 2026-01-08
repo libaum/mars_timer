@@ -1,6 +1,8 @@
 package com.cloudcatcher.marstimer
 
 import android.Manifest
+
+
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -18,16 +20,23 @@ import com.cloudcatcher.marstimer.viewmodel.TimerViewModel
 import com.cloudcatcher.marstimer.viewmodel.TimerViewModelFactory
 
 import androidx.activity.SystemBarStyle
+
+
 import android.graphics.Color
 
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
+
+
 class MainActivity : ComponentActivity() {
 
     private val timerViewModel: TimerViewModel by viewModels {
-        TimerViewModelFactory(com.cloudcatcher.marstimer.data.AppDatabase.getDatabase(application).meditationSessionDao())
+val app = application as MarsTimerApplication
+
+TimerViewModelFactory(app.database.meditationSessionDao(), app.userPreferencesRepository)
+
     }
 
     private val requestPermissionLauncher =
@@ -44,6 +53,8 @@ class MainActivity : ComponentActivity() {
             }
         }
     override fun onCreate(savedInstanceState: Bundle?) {
+setTheme(R.style.Theme_MarsTimer)
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
             // light(...) means "Light Bar" -> Dark Icons. We want dark icons on black background (invisible).

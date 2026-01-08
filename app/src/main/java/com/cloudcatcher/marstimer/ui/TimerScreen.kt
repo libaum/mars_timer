@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
@@ -56,7 +60,7 @@ fun TimerScreen(timerViewModel: TimerViewModel = viewModel()) {
                 .fillMaxSize()
                 .combinedClickable(
                     onClick = { showStats = false },
-                    onLongClick = { showStats = false } // Double safety?
+                    onLongClick = { showStats = false }
                 )
         ) {
             StatisticsScreen(viewModel = timerViewModel)
@@ -65,6 +69,12 @@ fun TimerScreen(timerViewModel: TimerViewModel = viewModel()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(top = 24.dp) // Manual padding or use statusBarsPadding
+                // User said: Touch Surface must not go into Status Bar.
+                // We use statusBarsPadding() to push the content down, but we want the background to be black.
+                // The Surface in MainActivity is black.
+                // So we apply statusBarsPadding to the Box that has the Clickable modifier.
+                .statusBarsPadding()
                 .combinedClickable(
                     onClick = {
                         if (isIdle) {
@@ -76,7 +86,9 @@ fun TimerScreen(timerViewModel: TimerViewModel = viewModel()) {
                         }
                     },
                     onLongClick = {
-                        showStats = true
+                        if (isIdle) {
+                            showStats = true
+                        }
                     }
                 )
         ) {
@@ -87,121 +99,175 @@ fun TimerScreen(timerViewModel: TimerViewModel = viewModel()) {
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSecondary,
                     modifier = Modifier
-                        .align(BiasAlignment(0f, -0.5f)) // Fixed above timer
+                        .align(BiasAlignment(0f, -0.6f))
                         .padding(bottom = 16.dp)
                 )
             }
 
-            // 2. The Time Display (Fixed Position)
-            Text(
-                text = formatTime(uiState.remainingTime),
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier
-                    .align(BiasAlignment(0f, -0.3f)) // Fixed position
-                    .padding(24.dp)
-            )
+            // 2. Reference for Time Position
+            val timeBias = -0.3f
 
-            // 3. Controls - Positioned below
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 100.dp), // Push up a bit
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            // Time Display & Adjustments
             if (isIdle) {
-                // Settings & Start
-                // Settings (Meditation Time)
                 Row(
+                    modifier = Modifier
+                        .align(BiasAlignment(0f, timeBias))
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
+                    // Minus
+                    IconButton(
+                        onClick = { timerViewModel.decrementMeditationTime() },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("-", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onBackground)
+                    }
+
+                    // Use Monospace to prevent jitter
                     Text(
-                        text = "-",
-                        style = MaterialTheme.typography.headlineMedium,
+                        text = formatTime(uiState.remainingTime),
+                        style = MaterialTheme.typography.displayLarge.copy(
+                            // fontFeatureSettings = "tnum" // Monospace includes this implicitly
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        ),
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier
-                            .clickable { timerViewModel.decrementMeditationTime() }
-                            .padding(8.dp)
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.width(200.dp) // Fixed width container
                     )
-                    Text(
-                        text = "${uiState.meditationTime} m",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier
-                            .width(80.dp)
-                            .padding(horizontal = 8.dp),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "+",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier
-                            .clickable { timerViewModel.incrementMeditationTime() }
-                            .padding(8.dp)
-                    )
+
+                    // Plus
+                    IconButton(
+                        onClick = { timerViewModel.incrementMeditationTime() },
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Text("+", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onBackground)
+                    }
                 }
 
-                // Settings (Prep Time)
+                // Quick Select Buttons
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier
+                        .align(BiasAlignment(0f, timeBias + 0.3f))
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    val quickTimes = listOf(5, 10, 15, 20)
+                    quickTimes.forEach { time ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable { timerViewModel.setMeditationTime(time) }
+                                // "unauffällige buttons" -> maybe just text with padding?
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "$time",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = if (uiState.meditationTime == time) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Prep Time Control - Larger and Higher
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 120.dp), // Lifted higher as requested
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Prep", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = "-",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier
                             .clickable { timerViewModel.decrementPrepTime() }
-                            .padding(8.dp)
+                            .padding(12.dp),
+                        style = MaterialTheme.typography.headlineSmall, // Larger
+                        color = MaterialTheme.colorScheme.onBackground
                     )
-                    Text(
-                        text = "${uiState.prepTime} s",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier
-                            .width(80.dp)
-                            .padding(horizontal = 8.dp),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
+                     Text(
+                         "${uiState.prepTime}s",
+                         style = MaterialTheme.typography.titleLarge, // Larger
+                         color = MaterialTheme.colorScheme.onBackground
+                     )
+                     Text(
                         text = "+",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier
                             .clickable { timerViewModel.incrementPrepTime() }
-                            .padding(8.dp)
+                            .padding(12.dp),
+                        style = MaterialTheme.typography.headlineSmall, // Larger
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+            } else {
+                // Running/Paused
+                // Running/Paused
+                 Text(
+                    text = formatTime(uiState.remainingTime),
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        // fontFeatureSettings = "tnum"
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    ),
+                    // Visual distinction for Warmup (Prep)
+                    color = if (isWarmup) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(BiasAlignment(0f, timeBias))
+                        // .padding(24.dp) // REMOVED: caused vertical shift compared to Idle state
+                        .width(200.dp) // Fixed width
+                )
+            }
 
-            } else if (isPaused) {
-                // Clear Button (Positioned to match settings height)
-                Box(
-                    modifier = Modifier.height(180.dp),
-                    contentAlignment = Alignment.Center
+            // 3. Controls (Save/Clear)
+            if (isPaused) {
+                // Calculate elapsed meditation time for save button visibility
+                val totalMeditationMs = uiState.meditationTime * 60 * 1000L
+                val elapsedMeditationTime = if (!uiState.wasPausedDuringPrep) {
+                    totalMeditationMs - uiState.remainingTime
+                } else {
+                    0L
+                }
+                val canSave = !uiState.wasPausedDuringPrep && elapsedMeditationTime > 0
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 100.dp),
+                    horizontalArrangement = Arrangement.spacedBy(32.dp)
                 ) {
-                    TextButton(onClick = { timerViewModel.stopTimer() }) {
+                     TextButton(onClick = { timerViewModel.stopTimer() }) {
                         Text(
                             text = "clear",
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                     }
+
+                    // Only show save if meditation time has actually elapsed
+                    if (canSave) {
+                        TextButton(onClick = { timerViewModel.savePartialSession() }) {
+                            Text(
+                                text = "save",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
                 }
             }
-        }
         }
     }
 }
 
 private fun formatTime(millis: Long): String {
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(minutes)
+    // Round up to the nearest second to show "5" for [5000, 4001] range
+    val roundedMillis = if (millis > 0) millis + 999 else 0
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(roundedMillis)
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(roundedMillis) - TimeUnit.MINUTES.toSeconds(minutes)
     return String.format("%02d:%02d", minutes, seconds)
 }
 
