@@ -14,15 +14,15 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
-class UserPreferencesRepository(private val context: Context) {
+class UserPreferencesRepository(private val context: Context) : UserPreferences {
     private val LAST_DURATION_KEY = intPreferencesKey("last_duration")
 
-    val lastDuration: Flow<Int> = context.dataStore.data
+    override val lastDuration: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[LAST_DURATION_KEY] ?: 20 // Default 20
         }
 
-    suspend fun saveLastDuration(minutes: Int) {
+    override suspend fun saveLastDuration(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[LAST_DURATION_KEY] = minutes
         }

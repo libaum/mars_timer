@@ -20,12 +20,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-import com.cloudcatcher.marstimer.UserPreferencesRepository
+import com.cloudcatcher.marstimer.UserPreferences
 import kotlinx.coroutines.flow.first
 
 class TimerViewModel(
     private val dao: MeditationSessionDao,
-    private val userPreferences: UserPreferencesRepository
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     enum class TimerState {
@@ -205,7 +205,7 @@ class TimerViewModel(
 
 class TimerViewModelFactory(
     private val dao: MeditationSessionDao,
-    private val userPreferences: UserPreferencesRepository
+    private val userPreferences: UserPreferences
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TimerViewModel::class.java)) {
