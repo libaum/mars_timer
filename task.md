@@ -100,6 +100,37 @@
     - [x] Change `windowSplashScreenAnimatedIcon` to `@drawable/ic_launcher_foreground`
 - [x] Verify with `install.sh` <!-- id: 21 -->
 
+# Task: Design Overhaul (TimerScreen)
+
+## Objectives
+- [ ] Implement "High-End Minimalist" look
+- [ ] Typography: Use Monospace (Thin) for Timer, Sans-Serif for text
+- [ ] Layout: Refine Timer, Controls, Presets, and Prep Time
+
+## Steps
+- [x] Modify `TimerScreen.kt` <!-- id: 22 -->
+    - [x] Update Timer Text (96sp+, Thin, Monospace, White)
+    - [x] Update Control Icons (+/-, Vertical Center, Transparent White)
+    - [x] Update Presets (Spacing 32dp, Circular Bg, Active/Inactive States)
+    - [x] Update Prep Time (Move down, Small, Gray, Uppercase Spaced)
+- [x] Verify with `install.sh` <!-- id: 23 -->
+
+# Task: Refine Design (Buttons, Timer, Presets)
+
+## Objectives
+- [ ] Match "Clear" & "Save" buttons to "Prep Time" style (Gray, Small, Discrete)
+- [ ] Make Main Timer smaller and thinner (Clean look)
+- [ ] Reduce spacing for Quick Select presets
+
+## Steps
+- [x] Modify `TimerScreen.kt` <!-- id: 24 -->
+    - [x] Update Clear/Save buttons (Gray, small font)
+    - [x] Reduce Timer font size (e.g., ~72sp) and ensure Thin weight
+    - [x] Reduce Preset spacing (e.g., 16dp)
+- [x] Verify with `install.sh` <!-- id: 25 -->
+
+
+
 
 
 

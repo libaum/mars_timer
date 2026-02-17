@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "com.cloudcatcher.marstimer"
+    namespace = "com.catchingclouds.marstimer"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.cloudcatcher.marstimer"
+        applicationId = "com.catchingclouds.marstimer"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
