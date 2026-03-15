@@ -1,0 +1,84 @@
+update_fastlane
+
+default_platform(:android)
+
+platform :android do
+
+  # Before each run: Ensure everything is clean
+  before_all do
+    # You could also add git pull or tests here
+  end
+
+  # --- Helper: Build Flutter Release AAB ---
+  desc "Builds the Flutter app as a release AAB"
+  private_lane :build_flutter_aab do
+    # Navigate to Flutter project root and build
+    Dir.chdir("../..") do
+      sh("flutter clean")
+      sh("flutter pub get")
+      sh("flutter build appbundle --release")
+    end
+  end
+
+  # --- SCENARIO 1: The "Daily Grind" (Code changed -> Testing) ---
+  desc "Builds a new version and uploads it to the Alpha track (Closed Testing)"
+  lane :alpha do
+    # 1. Build Flutter AAB
+    build_flutter_aab
+
+    # 2. Upload
+    supply(
+      track: "alpha",
+      # Flutter outputs the AAB here:
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+
+      # We do NOT want to overwrite texts/images every time (saves time)
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+
+      # 'draft' for the first upload, later you can set this to 'completed'
+      release_status: "draft"
+    )
+  end
+
+  # --- SCENARIO 2: The "Big Release" (Alpha is good -> To Production) ---
+  desc "Promotes the tested Alpha version directly to the Store (Production)"
+  lane :release do
+    # We do NOT rebuild! We take exactly the binary that was tested.
+    upload_to_play_store(
+      track: "alpha",              # Where do we take it from?
+      track_promote_to: "production", # Where do we push it to?
+
+      skip_upload_apk: true,       # Upload nothing new
+      skip_upload_aab: true,
+
+      # Now we want to ensure texts & images are up to date
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+
+  # --- SCENARIO 3: Marketing Only (New Screenshots / Texts) ---
+  desc "Updates ONLY the Store entries (Title, Description, Images)"
+  lane :metadata do
+    supply(
+      track: "production", # Or 'alpha', if you want to see it there first
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+
+  # --- SCENARIO 4: Build only (no upload) ---
+  desc "Builds the Flutter Release AAB without uploading"
+  lane :build do
+    build_flutter_aab
+    UI.success("AAB built successfully at: build/app/outputs/bundle/release/app-release.aab")
+  end
+
+end
+
