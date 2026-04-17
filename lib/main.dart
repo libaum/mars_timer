@@ -13,10 +13,13 @@ import 'screens/timer_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize database factory for all platforms
   if (Platform.isWindows || Platform.isLinux) {
-    // Initialize FFI
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  } else if (Platform.isAndroid || Platform.isIOS) {
+    // For Android and iOS, sqflite handles it automatically
+    // but we make sure it's available
   }
 
   // Initialize services
