@@ -64,7 +64,6 @@ class TimerScreenContent extends StatelessWidget {
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          debugPrint('TimerScreen: Tap detected');
           if (provider.isIdle) {
             provider.startTimer();
           } else if (provider.isRunning) {
@@ -72,6 +71,7 @@ class TimerScreenContent extends StatelessWidget {
           } else if (provider.isPaused) {
             provider.resumeTimer();
           }
+          // finished state: no tap action — use the overtime counter or buttons below
         },
         onLongPress: () {
           if (provider.isIdle) {
@@ -108,7 +108,7 @@ class TimerScreenContent extends StatelessWidget {
                             style: AppTheme.notoSansThin.copyWith(
                               fontSize: 50,
                               color: AppTheme.white.withValues(
-                                alpha: provider.isIdle ? 0.5 : 0,
+                                alpha: provider.timerState == TimerState.idle ? 0.5 : 0,
                               ),
                             ),
                           ),
@@ -158,7 +158,7 @@ class TimerScreenContent extends StatelessWidget {
                             style: AppTheme.notoSansThin.copyWith(
                               fontSize: 50,
                               color: AppTheme.white.withValues(
-                                alpha: provider.isIdle ? 0.5 : 0,
+                                alpha: provider.timerState == TimerState.idle ? 0.5 : 0,
                               ),
                             ),
                           ),
@@ -169,7 +169,7 @@ class TimerScreenContent extends StatelessWidget {
                 ),
 
                 // Quick Select Buttons (only in Idle)
-                if (provider.isIdle)
+                if (provider.timerState == TimerState.idle)
                   Positioned(
                     left: 0,
                     right: 0,
@@ -227,13 +227,13 @@ class TimerScreenContent extends StatelessWidget {
                               ),
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),
 
                 // Prep Time Controls (only in Idle)
-                if (provider.isIdle)
+                if (provider.timerState == TimerState.idle)
                   Positioned(
                     left: 0,
                     right: 0,
@@ -323,6 +323,73 @@ class TimerScreenContent extends StatelessWidget {
                     ),
                   ),
 
+                // Finished State — Overtime Counter
+                if (provider.isFinished)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: screenHeight * 0.52 - statusBarHeight,
+                    child: GestureDetector(
+                      onTap: provider.overtimeAccepted
+                          ? null
+                          : provider.acceptOvertime,
+                      child: Center(
+                        child: Text(
+                          _formatOvertime(provider.overtimeMs),
+                          style: AppTheme.notoSansThin.copyWith(
+                            fontSize: 36,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                            color: provider.overtimeAccepted
+                                ? AppTheme.gray
+                                : AppTheme.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Finished State — Discard / Save
+                if (provider.isFinished)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 100,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: provider.discardFinishedSession,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              'discard',
+                              style: AppTheme.notoSansThin.copyWith(
+                                fontSize: 16,
+                                letterSpacing: 2,
+                                color: AppTheme.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        GestureDetector(
+                          onTap: provider.saveFinishedSession,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(
+                              'save',
+                              style: AppTheme.notoSansThin.copyWith(
+                                fontSize: 16,
+                                letterSpacing: 2,
+                                color: AppTheme.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Pause Controls (Save/Clear)
                 if (provider.isPaused)
                   Positioned(
@@ -331,11 +398,9 @@ class TimerScreenContent extends StatelessWidget {
                     bottom: 100,
                     child: Builder(
                       builder: (context) {
-                        final totalMeditationMs =
-                            provider.meditationTime * 60 * 1000;
                         final elapsedMeditationTime =
                             !provider.wasPausedDuringPrep
-                            ? totalMeditationMs - provider.remainingTime
+                            ? provider.totalMeditationMs - provider.remainingTime
                             : 0;
                         final canSave =
                             !provider.wasPausedDuringPrep &&
@@ -395,5 +460,12 @@ class TimerScreenContent extends StatelessWidget {
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  String _formatOvertime(int millis) {
+    final totalSeconds = millis ~/ 1000;
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '+${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
