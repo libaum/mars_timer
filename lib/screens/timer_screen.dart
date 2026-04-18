@@ -119,7 +119,9 @@ class TimerScreenContent extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
-                          _formatTime(provider.remainingTime),
+                          provider.isFinished
+                              ? _formatDuration(provider.totalMeditationMs + (provider.overtimeAccepted ? provider.overtimeMs : 0))
+                              : _formatTime(provider.remainingTime),
                           style: provider.isWarmup
                               ? AppTheme.notoSansThin.copyWith(
                                   fontSize: 72,
@@ -244,28 +246,6 @@ class TimerScreenContent extends StatelessWidget {
                     child: Column(
                       children: [
                         if (provider.prepTime > 0) ...[
-                          // Active prep time display
-                          Text(
-                            '${provider.prepTime}s',
-                            style: AppTheme.notoSansLight.copyWith(
-                              fontSize: 24,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                              color: AppTheme.white.withValues(alpha: 0.7),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'delay',
-                            style: AppTheme.notoSansRegular.copyWith(
-                              fontSize: 12,
-                              letterSpacing: 1,
-                              color: AppTheme.gray,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Adjust controls
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -273,16 +253,26 @@ class TimerScreenContent extends StatelessWidget {
                                 onTap: provider.decrementPrepTime,
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 0,
+                                    horizontal: 20,
+                                    vertical: 12,
                                   ),
                                   child: Text(
                                     '−',
-                                    style: AppTheme.notoSansThickerThin
-                                        .copyWith(
-                                          fontSize: 20,
-                                          color: AppTheme.gray,
-                                        ),
+                                    style: AppTheme.notoSansThickerThin.copyWith(
+                                      fontSize: 22,
+                                      color: AppTheme.gray,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 160,
+                                child: Text(
+                                  '${provider.prepTime}s delay',
+                                  textAlign: TextAlign.center,
+                                  style: AppTheme.notoSansThickerThin.copyWith(
+                                    fontSize: 22,
+                                    color: AppTheme.white.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
@@ -290,33 +280,30 @@ class TimerScreenContent extends StatelessWidget {
                                 onTap: provider.incrementPrepTime,
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 0,
+                                    horizontal: 20,
+                                    vertical: 12,
                                   ),
                                   child: Text(
                                     '+',
-                                    style: AppTheme.notoSansThickerThin
-                                        .copyWith(
-                                          fontSize: 20,
-                                          color: AppTheme.gray,
-                                        ),
+                                    style: AppTheme.notoSansThickerThin.copyWith(
+                                      fontSize: 22,
+                                      color: AppTheme.gray,
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ] else ...[
-                          // No prep time - show add option
                           GestureDetector(
                             onTap: provider.incrementPrepTime,
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Text(
                                 '+ delay',
-                                style: AppTheme.notoSansLight.copyWith(
-                                  fontSize: 14,
-                                  letterSpacing: 1,
-                                  color: AppTheme.gray.withValues(alpha: 0.8),
+                                style: AppTheme.notoSansThickerThin.copyWith(
+                                  fontSize: 22,
+                                  color: AppTheme.gray.withValues(alpha: 0.6),
                                 ),
                               ),
                             ),
@@ -327,7 +314,7 @@ class TimerScreenContent extends StatelessWidget {
                   ),
 
                 // Finished State — Overtime Counter
-                if (provider.isFinished)
+                if (provider.isFinished && !provider.overtimeAccepted)
                   Positioned(
                     left: 0,
                     right: 0,
@@ -363,26 +350,26 @@ class TimerScreenContent extends StatelessWidget {
                         GestureDetector(
                           onTap: provider.discardFinishedSession,
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                             child: Text(
                               'discard',
                               style: AppTheme.notoSansThin.copyWith(
-                                fontSize: 16,
+                                fontSize: 24,
                                 letterSpacing: 2,
                                 color: AppTheme.white,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 32),
+                        const SizedBox(width: 24),
                         GestureDetector(
                           onTap: provider.saveFinishedSession,
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                             child: Text(
                               'save',
                               style: AppTheme.notoSansThin.copyWith(
-                                fontSize: 16,
+                                fontSize: 24,
                                 letterSpacing: 2,
                                 color: AppTheme.white,
                               ),
@@ -415,11 +402,11 @@ class TimerScreenContent extends StatelessWidget {
                             GestureDetector(
                               onTap: provider.stopTimer,
                               child: Padding(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                 child: Text(
                                   'clear',
                                   style: AppTheme.notoSansThin.copyWith(
-                                    fontSize: 16,
+                                    fontSize: 24,
                                     letterSpacing: 2,
                                     color: AppTheme.white,
                                   ),
@@ -427,15 +414,15 @@ class TimerScreenContent extends StatelessWidget {
                               ),
                             ),
                             if (canSave) ...[
-                              const SizedBox(width: 32),
+                              const SizedBox(width: 24),
                               GestureDetector(
                                 onTap: provider.savePartialSession,
                                 child: Padding(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                   child: Text(
                                     'save',
                                     style: AppTheme.notoSansThin.copyWith(
-                                      fontSize: 16,
+                                      fontSize: 24,
                                       letterSpacing: 2,
                                       color: AppTheme.white,
                                     ),
@@ -500,6 +487,13 @@ class TimerScreenContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDuration(int millis) {
+    final totalSeconds = millis ~/ 1000;
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   String _formatTime(int millis) {

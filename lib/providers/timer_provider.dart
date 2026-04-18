@@ -63,6 +63,38 @@ class TimerProvider extends ChangeNotifier {
 
   List<int> get quickSelectSlots => _quickSelectSlots;
 
+  int get currentStreak {
+    if (_sessionHistory.isEmpty) return 0;
+    String dateStr(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final today = DateTime.now();
+    final days = _sessionHistory
+        .map((s) => dateStr(DateTime.fromMillisecondsSinceEpoch(s.date)))
+        .toSet()
+        .toList()
+      ..sort();
+    final todayStr = dateStr(today);
+    final yesterdayStr = dateStr(today.subtract(const Duration(days: 1)));
+    if (days.last != todayStr && days.last != yesterdayStr) return 0;
+    int streak = 1;
+    for (int i = days.length - 2; i >= 0; i--) {
+      final curr = DateTime.parse(days[i + 1]);
+      final prev = DateTime.parse(days[i]);
+      if (curr.difference(prev).inDays == 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  double get averageSessionMinutes {
+    if (_sessionHistory.isEmpty) return 0;
+    final total = _sessionHistory.fold<int>(0, (sum, s) => sum + s.duration);
+    return total / _sessionHistory.length / 60.0;
+  }
+
   bool get isIdle => _timerState == TimerState.idle;
   bool get isFinished => _timerState == TimerState.finished;
   bool get isRunning => _timerState == TimerState.running || _timerState == TimerState.prep;
@@ -198,6 +230,7 @@ class TimerProvider extends ChangeNotifier {
   /// Discards the finished session without saving anything.
   Future<void> discardFinishedSession() async {
     _overtimeTimer?.cancel();
+    _audioService.stopSound();
     _resetFinished();
     await WakelockPlus.disable();
     notifyListeners();

@@ -14,6 +14,8 @@ class StatisticsScreen extends StatelessWidget {
         return StatisticsContent(
           totalMinutes: provider.totalMinutes,
           history: provider.sessionHistory,
+          streak: provider.currentStreak,
+          avgMinutes: provider.averageSessionMinutes,
         );
       },
     );
@@ -23,101 +25,94 @@ class StatisticsScreen extends StatelessWidget {
 class StatisticsContent extends StatelessWidget {
   final int totalMinutes;
   final List<MeditationSession> history;
+  final int streak;
+  final double avgMinutes;
 
   const StatisticsContent({
     super.key,
     required this.totalMinutes,
     required this.history,
+    required this.streak,
+    required this.avgMinutes,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Calculate total days (unique days in history)
-    String dateFormat(DateTime date) =>
-        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     final totalDays = history
-        .map((s) => dateFormat(DateTime.fromMillisecondsSinceEpoch(s.date)))
+        .map((s) {
+          final d = DateTime.fromMillisecondsSinceEpoch(s.date);
+          return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        })
         .toSet()
         .length;
 
     return Scaffold(
       backgroundColor: AppTheme.black,
-      body: Container(
-        padding: const EdgeInsets.all(32),
-        child: Center(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Header
               Text(
                 'STATS',
                 style: AppTheme.notoSansMedium.copyWith(
-                  fontSize: 16,
+                  fontSize: 13,
+                  letterSpacing: 2,
                   color: AppTheme.gray,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 48),
 
-              if (history.isEmpty) ...[
+              if (history.isEmpty)
                 Text(
                   'no meditation yet',
                   style: AppTheme.notoSansRegular.copyWith(
                     fontSize: 16,
                     color: AppTheme.darkGray,
                   ),
-                ),
-              ] else ...[
-                // Stats Row
+                )
+              else ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Column(
-                      children: [
-                        Text(
-                          '$totalDays',
-                          style: AppTheme.notoSansLight.copyWith(
-                            fontSize: 45,
-                            color: AppTheme.white,
-                          ),
-                        ),
-                        Text(
-                          'Days',
-                          style: AppTheme.notoSansRegular.copyWith(
-                            fontSize: 16,
-                            color: AppTheme.gray,
-                          ),
-                        ),
-                      ],
+                    _StatCell(
+                      value: streak > 0 ? '$streak' : '—',
+                      label: 'day streak',
                     ),
-                    Column(
-                      children: [
-                        Text(
-                          '$totalMinutes',
-                          style: AppTheme.notoSansLight.copyWith(
-                            fontSize: 45,
-                            color: AppTheme.white,
-                          ),
-                        ),
-                        Text(
-                          'Minutes',
-                          style: AppTheme.notoSansRegular.copyWith(
-                            fontSize: 16,
-                            color: AppTheme.gray,
-                          ),
-                        ),
-                      ],
-                    ),
+                    _StatCell(value: '$totalDays', label: 'days'),
+                    _StatCell(value: '$totalMinutes', label: 'minutes'),
                   ],
                 ),
 
-                const SizedBox(height: 64),
+                const SizedBox(height: 16),
 
-                // Cumulative Line Graph
+                Text(
+                  'avg ${avgMinutes.round()} min / session',
+                  style: AppTheme.notoSansLight.copyWith(
+                    fontSize: 13,
+                    color: AppTheme.gray,
+                  ),
+                ),
+
+                const SizedBox(height: 56),
+
                 SizedBox(
-                  height: 150,
+                  height: 120,
                   width: double.infinity,
                   child: CustomPaint(
-                    painter: CumulativeGraphPainter(history: history),
+                    painter: DailyBarChartPainter(history: history),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  'last 30 days',
+                  style: AppTheme.notoSansLight.copyWith(
+                    fontSize: 11,
+                    letterSpacing: 1,
+                    color: AppTheme.darkGray,
                   ),
                 ),
               ],
@@ -129,53 +124,102 @@ class StatisticsContent extends StatelessWidget {
   }
 }
 
-class CumulativeGraphPainter extends CustomPainter {
+class _StatCell extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _StatCell({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: AppTheme.notoSansThin.copyWith(
+            fontSize: 48,
+            color: AppTheme.white,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: AppTheme.notoSansLight.copyWith(
+            fontSize: 12,
+            letterSpacing: 1,
+            color: AppTheme.gray,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class DailyBarChartPainter extends CustomPainter {
   final List<MeditationSession> history;
 
-  CumulativeGraphPainter({required this.history});
+  DailyBarChartPainter({required this.history});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (history.isEmpty) return;
 
-    final sortedHistory = [...history]..sort((a, b) => a.date.compareTo(b.date));
-    final dataPoints = <double>[];
-    var cumulativeSeconds = 0;
+    const days = 30;
+    final now = DateTime.now();
 
-    for (final session in sortedHistory) {
-      cumulativeSeconds += session.duration;
-      dataPoints.add(cumulativeSeconds / 60.0); // Convert to minutes
+    String dateStr(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    final dailyMinutes = <String, double>{};
+    for (final session in history) {
+      final key = dateStr(DateTime.fromMillisecondsSinceEpoch(session.date));
+      dailyMinutes[key] = (dailyMinutes[key] ?? 0) + session.duration / 60.0;
     }
 
-    if (dataPoints.isEmpty) return;
+    final values = <double>[
+      for (int i = days - 1; i >= 0; i--)
+        dailyMinutes[dateStr(now.subtract(Duration(days: i)))] ?? 0,
+    ];
 
-    final paint = Paint()
+    final maxVal = values.fold(0.0, (a, b) => a > b ? a : b).clamp(1.0, double.infinity);
+    final barWidth = size.width / days;
+    final gap = barWidth * 0.3;
+
+    final activePaint = Paint()
       ..color = AppTheme.white
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.fill;
 
-    final width = size.width;
-    final height = size.height;
-    final maxMinutes = dataPoints.last.clamp(1.0, double.infinity);
-    final xStep = dataPoints.length > 1 ? width / (dataPoints.length - 1) : width;
+    final emptyPaint = Paint()
+      ..color = AppTheme.darkGray
+      ..style = PaintingStyle.fill;
 
-    final path = Path();
+    for (int i = 0; i < days; i++) {
+      final x = i * barWidth + gap / 2;
+      final w = barWidth - gap;
 
-    for (var i = 0; i < dataPoints.length; i++) {
-      final x = i * xStep;
-      final y = height - (dataPoints[i] / maxMinutes * height);
-
-      if (i == 0) {
-        path.moveTo(x, y);
+      if (values[i] > 0) {
+        final h = (values[i] / maxVal * size.height).clamp(3.0, size.height);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(x, size.height - h, w, h),
+            const Radius.circular(2),
+          ),
+          activePaint,
+        );
       } else {
-        path.lineTo(x, y);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(x, size.height - 2, w, 2),
+            const Radius.circular(1),
+          ),
+          emptyPaint,
+        );
       }
     }
-
-    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CumulativeGraphPainter oldDelegate) =>
+  bool shouldRepaint(covariant DailyBarChartPainter oldDelegate) =>
       oldDelegate.history.length != history.length;
 }
