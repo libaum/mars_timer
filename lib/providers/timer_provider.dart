@@ -22,6 +22,7 @@ class TimerProvider extends ChangeNotifier {
   TimerState _timerState = TimerState.idle;
   int _meditationTime = 20; // in minutes
   int _prepTime = 0; // in seconds
+  List<int> _quickSelectSlots = [5, 10, 15, 20];
   int _remainingTime = 20 * 60 * 1000; // in milliseconds
   bool _wasPausedDuringPrep = false;
   bool _isTestDuration = false;
@@ -60,6 +61,8 @@ class TimerProvider extends ChangeNotifier {
   int get totalMinutes => _totalMinutes;
   List<MeditationSession> get sessionHistory => _sessionHistory;
 
+  List<int> get quickSelectSlots => _quickSelectSlots;
+
   bool get isIdle => _timerState == TimerState.idle;
   bool get isFinished => _timerState == TimerState.finished;
   bool get isRunning => _timerState == TimerState.running || _timerState == TimerState.prep;
@@ -73,6 +76,7 @@ class TimerProvider extends ChangeNotifier {
       _meditationTime = lastDuration > 0 ? lastDuration : 20;
       _remainingTime = _meditationTime * 60 * 1000;
       _prepTime = _preferencesService.getLastPrepTime();
+      _quickSelectSlots = _preferencesService.getQuickSelectSlots();
 
       await _loadStatistics();
       await _audioService.initialize();
@@ -297,6 +301,12 @@ class TimerProvider extends ChangeNotifier {
   void decrementPrepTime() {
     _prepTime = (_prepTime - 5).clamp(0, _prepTime);
     _preferencesService.saveLastPrepTime(_prepTime);
+    notifyListeners();
+  }
+
+  void setQuickSelectSlot(int index, int minutes) {
+    _quickSelectSlots[index] = minutes.clamp(1, 180);
+    _preferencesService.saveQuickSelectSlots(_quickSelectSlots);
     notifyListeners();
   }
 

@@ -200,10 +200,13 @@ class TimerScreenContent extends StatelessWidget {
                             ),
                           ),
                         ),
-                        ...[5, 10, 15, 20].map((time) {
+                        ...provider.quickSelectSlots.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final time = entry.value;
                           final isSelected = provider.meditationTime == time;
                           return GestureDetector(
                             onTap: () => provider.setMeditationTime(time),
+                            onLongPress: () => _editSlot(context, provider, index),
                             child: Container(
                               width: 56,
                               height: 56,
@@ -447,6 +450,52 @@ class TimerScreenContent extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _editSlot(BuildContext context, TimerProvider provider, int index) {
+    final controller = TextEditingController(
+      text: '${provider.quickSelectSlots[index]}',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppTheme.darkGray,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            textAlign: TextAlign.center,
+            style: AppTheme.notoSansThin.copyWith(
+              fontSize: 48,
+              color: AppTheme.white,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: '—',
+              hintStyle: AppTheme.notoSansThin.copyWith(
+                fontSize: 48,
+                color: AppTheme.gray,
+              ),
+              suffixText: 'min',
+              suffixStyle: AppTheme.notoSansLight.copyWith(
+                fontSize: 16,
+                color: AppTheme.gray,
+              ),
+            ),
+            onSubmitted: (value) {
+              final minutes = int.tryParse(value);
+              if (minutes != null && minutes > 0) {
+                provider.setQuickSelectSlot(index, minutes);
+              }
+              Navigator.of(ctx).pop();
+            },
           ),
         ),
       ),
