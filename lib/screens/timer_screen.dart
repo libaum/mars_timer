@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/timer_provider.dart';
@@ -179,29 +180,30 @@ class TimerScreenContent extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        GestureDetector(
-                          onTap: provider.setTestDuration,
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.darkGray,
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              '5s',
-                              style: AppTheme.notoSansLight.copyWith(
-                                fontSize: 16,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                                color: AppTheme.white,
+                        if (kDebugMode)
+                          GestureDetector(
+                            onTap: provider.setTestDuration,
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.darkGray,
+                                borderRadius: BorderRadius.circular(28),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                '5s',
+                                style: AppTheme.notoSansLight.copyWith(
+                                  fontSize: 16,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                  color: AppTheme.white,
+                                ),
                               ),
                             ),
                           ),
-                        ),
                         ...provider.quickSelectSlots.asMap().entries.map((entry) {
                           final index = entry.key;
                           final time = entry.value;
