@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 
 class AudioService {
   static final AudioService _instance = AudioService._internal();
@@ -12,6 +13,16 @@ class AudioService {
 
   Future<void> initialize() async {
     if (_isInitialized) return;
+    await AudioPlayer.global.setAudioContext(AudioContext(
+      android: const AudioContextAndroid(
+        contentType: AndroidContentType.music,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.gain,
+      ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+      ),
+    ));
     await _player.setSource(AssetSource('audio/singing_bowl.mp3'));
     _isInitialized = true;
   }
@@ -25,7 +36,7 @@ class AudioService {
       await _player.play(AssetSource('audio/singing_bowl.mp3'));
       _startFadeOut();
     } catch (e) {
-      // Ignore audio errors
+      debugPrint('AudioService.playSound error: $e');
     }
   }
 
