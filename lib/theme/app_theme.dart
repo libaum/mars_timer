@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static const Color black = Color(0xFF000000);
@@ -7,25 +6,32 @@ class AppTheme {
   static const Color gray = Color(0xFF808080);
   static const Color darkGray = Color(0xFF404040);
 
-  static TextStyle get notoSansLight => GoogleFonts.notoSans(
+  static const String _fontFamily = 'NotoSans';
+
+  static TextStyle get notoSansLight => const TextStyle(
+        fontFamily: _fontFamily,
         fontWeight: FontWeight.w300,
       );
 
-  static TextStyle get notoSansRegular => GoogleFonts.notoSans(
+  static TextStyle get notoSansRegular => const TextStyle(
+        fontFamily: _fontFamily,
         fontWeight: FontWeight.w400,
       );
 
-  static TextStyle get notoSansMedium => GoogleFonts.notoSans(
+  static TextStyle get notoSansMedium => const TextStyle(
+        fontFamily: _fontFamily,
         fontWeight: FontWeight.w500,
       );
 
-  static TextStyle get notoSansThin => GoogleFonts.notoSans(
+  static TextStyle get notoSansThin => const TextStyle(
+        fontFamily: _fontFamily,
         fontWeight: FontWeight.w100,
       );
 
-  static TextStyle get notoSansThickerThin => GoogleFonts.notoSans(
-    fontWeight: FontWeight.w200,
-  );
+  static TextStyle get notoSansThickerThin => const TextStyle(
+        fontFamily: _fontFamily,
+        fontWeight: FontWeight.w200,
+      );
 
   static ThemeData get darkTheme => ThemeData(
         brightness: Brightness.dark,
@@ -59,4 +65,3 @@ class AppTheme {
         useMaterial3: true,
       );
 }
-
