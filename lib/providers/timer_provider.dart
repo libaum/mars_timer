@@ -5,6 +5,7 @@ import '../models/meditation_session.dart';
 import '../services/database_service.dart';
 import '../services/preferences_service.dart';
 import '../services/audio_service.dart';
+import '../services/foreground_service.dart';
 
 enum TimerState {
   idle,
@@ -30,6 +31,7 @@ class TimerProvider extends ChangeNotifier {
   Timer? _timer;
   int _targetTime = 0;
   TimerState _previousState = TimerState.idle;
+  int _lastNotificationSec = -1;
 
   // Overtime (finished state)
   Timer? _overtimeTimer;
@@ -137,6 +139,7 @@ class TimerProvider extends ChangeNotifier {
     await WakelockPlus.enable();
 
     _wasPausedDuringPrep = false;
+    _lastNotificationSec = -1;
     final totalMeditationMs = _isTestDuration ? 5000 : _meditationTime * 60 * 1000;
 
     if (_prepTime > 0) {
@@ -144,12 +147,14 @@ class TimerProvider extends ChangeNotifier {
       _remainingTime = _prepTime * 1000;
       _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
       notifyListeners();
+      await ForegroundService.start('Preparing…');
       _startCountdown(() {
         _audioService.playSound();
         _timerState = TimerState.running;
         _remainingTime = totalMeditationMs;
         _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
         _wasPausedDuringPrep = false;
+        _lastNotificationSec = -1;
         notifyListeners();
         _startCountdown(_onMeditationComplete);
       });
@@ -159,6 +164,8 @@ class TimerProvider extends ChangeNotifier {
       _remainingTime = totalMeditationMs;
       _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
       notifyListeners();
+      final m = _remainingTime ~/ 60000;
+      await ForegroundService.start('$m:00 remaining');
       _startCountdown(_onMeditationComplete);
     }
   }
@@ -178,8 +185,19 @@ class TimerProvider extends ChangeNotifier {
         return;
       }
 
+      _maybeUpdateNotification();
       notifyListeners();
     });
+  }
+
+  void _maybeUpdateNotification() {
+    final sec = _remainingTime ~/ 1000;
+    if (sec == _lastNotificationSec) return;
+    _lastNotificationSec = sec;
+    final m = sec ~/ 60;
+    final s = (sec % 60).toString().padLeft(2, '0');
+    final prefix = _timerState == TimerState.prep ? 'Preparing · ' : '';
+    ForegroundService.update('$prefix$m:$s remaining');
   }
 
   // All state changes happen synchronously before any async work,
@@ -191,6 +209,7 @@ class TimerProvider extends ChangeNotifier {
     _overtimeMs = 0;
     _overtimeAccepted = false;
     notifyListeners();
+    ForegroundService.update('Session complete');
     _startOvertimeCounter();
     // Wakelock stays on — user may still be meditating during overtime
   }
@@ -223,7 +242,7 @@ class TimerProvider extends ChangeNotifier {
     await _databaseService.insertSession(session);
     await _loadStatistics();
     _resetFinished();
-    await WakelockPlus.disable();
+    await Future.wait([WakelockPlus.disable(), ForegroundService.stop()]);
     notifyListeners();
   }
 
@@ -232,7 +251,7 @@ class TimerProvider extends ChangeNotifier {
     _overtimeTimer?.cancel();
     _audioService.stopSound();
     _resetFinished();
-    await WakelockPlus.disable();
+    await Future.wait([WakelockPlus.disable(), ForegroundService.stop()]);
     notifyListeners();
   }
 
@@ -252,6 +271,7 @@ class TimerProvider extends ChangeNotifier {
       }
       _timerState = TimerState.paused;
       _timer?.cancel();
+      ForegroundService.update('Paused');
       notifyListeners();
     }
   }
@@ -260,6 +280,7 @@ class TimerProvider extends ChangeNotifier {
     if (_timerState == TimerState.paused) {
       _timerState = _previousState;
       _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
+      _lastNotificationSec = -1;
 
       if (_previousState == TimerState.prep) {
         _startCountdown(() {
@@ -268,6 +289,7 @@ class TimerProvider extends ChangeNotifier {
           _remainingTime = _isTestDuration ? 5000 : _meditationTime * 60 * 1000;
           _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
           _wasPausedDuringPrep = false;
+          _lastNotificationSec = -1;
           notifyListeners();
           _startCountdown(_onMeditationComplete);
         });
@@ -288,7 +310,7 @@ class TimerProvider extends ChangeNotifier {
     _wasPausedDuringPrep = false;
     _overtimeMs = 0;
     _overtimeAccepted = false;
-    await WakelockPlus.disable();
+    await Future.wait([WakelockPlus.disable(), ForegroundService.stop()]);
     notifyListeners();
   }
 

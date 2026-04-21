@@ -9,6 +9,7 @@ import 'services/preferences_service.dart';
 import 'services/audio_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/timer_screen.dart';
+import 'services/foreground_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,8 @@ void main() async {
     // For Android and iOS, sqflite handles it automatically
     // but we make sure it's available
   }
+
+  ForegroundService.initialize();
 
   // Initialize services
   final preferencesService = await PreferencesService.create();
