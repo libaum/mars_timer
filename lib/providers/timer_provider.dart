@@ -147,7 +147,6 @@ class TimerProvider extends ChangeNotifier {
       _remainingTime = _prepTime * 1000;
       _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
       notifyListeners();
-      await ForegroundService.start('Preparing…');
       _startCountdown(() {
         _audioService.playSound();
         _timerState = TimerState.running;
@@ -158,15 +157,16 @@ class TimerProvider extends ChangeNotifier {
         notifyListeners();
         _startCountdown(_onMeditationComplete);
       });
+      ForegroundService.start('Preparing…');
     } else {
       _audioService.playSound();
       _timerState = TimerState.running;
       _remainingTime = totalMeditationMs;
       _targetTime = DateTime.now().millisecondsSinceEpoch + _remainingTime;
       notifyListeners();
-      final m = _remainingTime ~/ 60000;
-      await ForegroundService.start('$m:00 remaining');
       _startCountdown(_onMeditationComplete);
+      final m = _remainingTime ~/ 60000;
+      ForegroundService.start('$m:00 remaining');
     }
   }
 
