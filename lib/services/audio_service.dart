@@ -41,8 +41,8 @@ class AudioService {
     }
   }
 
-  void _startFadeOut({int durationSeconds = 10}) {
-    const steps = 40;
+  void _startFadeOut({int durationSeconds = 18}) {
+    const steps = 90;
     final interval = Duration(
       milliseconds: durationSeconds * 1000 ~/ steps,
     );
@@ -50,8 +50,11 @@ class AudioService {
 
     _fadeTimer = Timer.periodic(interval, (timer) async {
       step++;
-      final volume = 1.0 - step / steps;
-      if (volume <= 0) {
+      // Cubic ease-out: volume drops slowly at first, then tails off into
+      // near-silence well before the cut, so the stop is inaudible.
+      final t = step / steps;
+      final volume = (1.0 - t) * (1.0 - t) * (1.0 - t);
+      if (step >= steps) {
         timer.cancel();
         try {
           await _player.stop();
