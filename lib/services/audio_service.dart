@@ -23,17 +23,18 @@ class AudioService {
         category: AVAudioSessionCategory.playback,
       ),
     ));
-    await _player.setSource(AssetSource('audio/singing_bowl.mp3'));
+    await _player.setReleaseMode(ReleaseMode.stop);
     _isInitialized = true;
   }
 
   Future<void> playSound() async {
+    _fadeTimer?.cancel();
     try {
-      _fadeTimer?.cancel();
-      await _player.setVolume(1.0);
       await _player.stop();
-      await _player.seek(Duration.zero);
-      await _player.play(AssetSource('audio/singing_bowl.mp3'));
+      await _player.setVolume(1.0);
+      // Don't await play(): on Android, audioplayers' play future can hang
+      // for 30s when called repeatedly. Fire-and-forget instead.
+      unawaited(_player.play(AssetSource('audio/singing_bowl.mp3')));
       _startFadeOut();
     } catch (e) {
       debugPrint('AudioService.playSound error: $e');
