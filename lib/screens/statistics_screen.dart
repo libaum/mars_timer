@@ -38,6 +38,36 @@ class StatisticsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (history.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppTheme.black,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'no sessions yet',
+                  style: AppTheme.notoSansLight.copyWith(
+                    fontSize: 20,
+                    color: AppTheme.gray,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'start your first meditation',
+                  style: AppTheme.notoSansLight.copyWith(
+                    fontSize: 13,
+                    color: AppTheme.darkGray,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final totalDays = history
         .map((s) {
           final d = DateTime.fromMillisecondsSinceEpoch(s.date);
@@ -64,58 +94,48 @@ class StatisticsContent extends StatelessWidget {
               ),
               const SizedBox(height: 48),
 
-              if (history.isEmpty)
-                Text(
-                  'no meditation yet',
-                  style: AppTheme.notoSansRegular.copyWith(
-                    fontSize: 16,
-                    color: AppTheme.darkGray,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _StatCell(
+                    value: streak > 0 ? '$streak' : '—',
+                    label: 'day streak',
                   ),
-                )
-              else ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _StatCell(
-                      value: streak > 0 ? '$streak' : '—',
-                      label: 'day streak',
-                    ),
-                    _StatCell(value: '$totalDays', label: 'days'),
-                    _StatCell(value: '$totalMinutes', label: 'minutes'),
-                  ],
+                  _StatCell(value: '$totalDays', label: 'days'),
+                  _StatCell(value: '$totalMinutes', label: 'minutes'),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              Text(
+                'avg ${avgMinutes.round()} min / session',
+                style: AppTheme.notoSansLight.copyWith(
+                  fontSize: 13,
+                  color: AppTheme.gray,
                 ),
+              ),
 
-                const SizedBox(height: 16),
+              const SizedBox(height: 56),
 
-                Text(
-                  'avg ${avgMinutes.round()} min / session',
-                  style: AppTheme.notoSansLight.copyWith(
-                    fontSize: 13,
-                    color: AppTheme.gray,
-                  ),
+              SizedBox(
+                height: 120,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: DailyBarChartPainter(history: history),
                 ),
+              ),
 
-                const SizedBox(height: 56),
+              const SizedBox(height: 8),
 
-                SizedBox(
-                  height: 120,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    painter: DailyBarChartPainter(history: history),
-                  ),
+              Text(
+                'last 30 days',
+                style: AppTheme.notoSansLight.copyWith(
+                  fontSize: 11,
+                  letterSpacing: 1,
+                  color: AppTheme.darkGray,
                 ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  'last 30 days',
-                  style: AppTheme.notoSansLight.copyWith(
-                    fontSize: 11,
-                    letterSpacing: 1,
-                    color: AppTheme.darkGray,
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
         ),
