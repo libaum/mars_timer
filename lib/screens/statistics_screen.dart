@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/timer_provider.dart';
@@ -11,11 +12,57 @@ class StatisticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<TimerProvider>(
       builder: (context, provider, child) {
-        return StatisticsContent(
-          totalMinutes: provider.totalMinutes,
-          history: provider.sessionHistory,
-          streak: provider.currentStreak,
-          avgMinutes: provider.averageSessionMinutes,
+        return Stack(
+          children: [
+            StatisticsContent(
+              totalMinutes: provider.totalMinutes,
+              history: provider.sessionHistory,
+              streak: provider.currentStreak,
+              avgMinutes: provider.averageSessionMinutes,
+            ),
+            if (kDebugMode)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 24,
+                child: SafeArea(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: provider.seedTestData,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Text(
+                            'seed',
+                            style: AppTheme.notoSansLight.copyWith(
+                              fontSize: 12,
+                              color: AppTheme.darkGray,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      GestureDetector(
+                        onTap: provider.clearAllSessions,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Text(
+                            'clear',
+                            style: AppTheme.notoSansLight.copyWith(
+                              fontSize: 12,
+                              color: AppTheme.darkGray,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );

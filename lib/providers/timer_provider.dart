@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/meditation_session.dart';
@@ -371,6 +372,36 @@ class TimerProvider extends ChangeNotifier {
     _meditationTime = 1;
     _remainingTime = 5 * 1000;
     notifyListeners();
+  }
+
+  /// Debug-only: insert ~30 days of varied meditation sessions for UI testing.
+  Future<void> seedTestData() async {
+    final now = DateTime.now();
+    final rand = math.Random(42);
+    // Skip a few days to make the bar chart look realistic.
+    final skipDays = {3, 7, 12, 19, 25};
+    for (int i = 0; i < 30; i++) {
+      if (skipDays.contains(i)) continue;
+      final day = now.subtract(Duration(days: i));
+      // 1–2 sessions per day, durations between 5 and 30 minutes.
+      final sessionsToday = rand.nextInt(2) + 1;
+      for (int s = 0; s < sessionsToday; s++) {
+        final minutes = 5 + rand.nextInt(26);
+        final hour = 7 + rand.nextInt(14);
+        final date = DateTime(day.year, day.month, day.day, hour);
+        await _databaseService.insertSession(MeditationSession(
+          date: date.millisecondsSinceEpoch,
+          duration: minutes * 60,
+        ));
+      }
+    }
+    await _loadStatistics();
+  }
+
+  /// Debug-only: wipe all stored sessions.
+  Future<void> clearAllSessions() async {
+    await _databaseService.clearAllSessions();
+    await _loadStatistics();
   }
 
   @override

@@ -63,5 +63,10 @@ class DatabaseService {
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM meditation_sessions');
     return result.first['count'] as int;
   }
+
+  Future<void> clearAllSessions() async {
+    final db = await database;
+    await db.delete('meditation_sessions');
+  }
 }
 
