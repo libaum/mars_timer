@@ -131,24 +131,11 @@ class StatisticsContent extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'STATS',
-                style: AppTheme.notoSansMedium.copyWith(
-                  fontSize: 13,
-                  letterSpacing: 2,
-                  color: AppTheme.gray,
-                ),
-              ),
-              const SizedBox(height: 48),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _StatCell(
-                    value: streak > 0 ? '$streak' : '—',
-                    label: 'day streak',
-                  ),
-                  _StatCell(value: '$totalDays', label: 'days'),
+                  _StatCell(value: '$streak', label: 'day streak'),
+                  _StatCell(value: '$totalDays', label: 'active days'),
                   _StatCell(value: '$totalMinutes', label: 'minutes'),
                 ],
               ),
@@ -254,6 +241,10 @@ class DailyBarChartPainter extends CustomPainter {
     final gap = barWidth * 0.3;
 
     final activePaint = Paint()
+      ..color = AppTheme.white.withValues(alpha: 0.55)
+      ..style = PaintingStyle.fill;
+
+    final activeTodayPaint = Paint()
       ..color = AppTheme.white
       ..style = PaintingStyle.fill;
 
@@ -261,9 +252,14 @@ class DailyBarChartPainter extends CustomPainter {
       ..color = AppTheme.darkGray
       ..style = PaintingStyle.fill;
 
+    final emptyTodayPaint = Paint()
+      ..color = AppTheme.gray
+      ..style = PaintingStyle.fill;
+
     for (int i = 0; i < days; i++) {
       final x = i * barWidth + gap / 2;
       final w = barWidth - gap;
+      final isToday = i == days - 1;
 
       if (values[i] > 0) {
         final h = (values[i] / maxVal * size.height).clamp(3.0, size.height);
@@ -272,7 +268,7 @@ class DailyBarChartPainter extends CustomPainter {
             Rect.fromLTWH(x, size.height - h, w, h),
             const Radius.circular(2),
           ),
-          activePaint,
+          isToday ? activeTodayPaint : activePaint,
         );
       } else {
         canvas.drawRRect(
@@ -280,7 +276,7 @@ class DailyBarChartPainter extends CustomPainter {
             Rect.fromLTWH(x, size.height - 2, w, 2),
             const Radius.circular(1),
           ),
-          emptyPaint,
+          isToday ? emptyTodayPaint : emptyPaint,
         );
       }
     }
