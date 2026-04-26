@@ -49,6 +49,14 @@ class TimerProvider extends ChangeNotifier {
   })  : _databaseService = databaseService,
         _preferencesService = preferencesService,
         _audioService = audioService {
+    // Read prefs synchronously so the first frame already shows the saved
+    // values — otherwise the UI would briefly flash the field defaults.
+    final lastDuration = preferencesService.getLastDuration();
+    _meditationTime = lastDuration > 0 ? lastDuration : 20;
+    _remainingTime = _meditationTime * 60 * 1000;
+    _prepTime = preferencesService.getLastPrepTime();
+    _quickSelectSlots = preferencesService.getQuickSelectSlots();
+
     _initialize();
   }
 
@@ -106,15 +114,8 @@ class TimerProvider extends ChangeNotifier {
 
   Future<void> _initialize() async {
     try {
-      final lastDuration = _preferencesService.getLastDuration();
-      _meditationTime = lastDuration > 0 ? lastDuration : 20;
-      _remainingTime = _meditationTime * 60 * 1000;
-      _prepTime = _preferencesService.getLastPrepTime();
-      _quickSelectSlots = _preferencesService.getQuickSelectSlots();
-
       await _loadStatistics();
       await _audioService.initialize();
-
       notifyListeners();
     } catch (e) {
       debugPrint('Error during initialization: $e');
