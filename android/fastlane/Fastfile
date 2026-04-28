@@ -27,15 +27,15 @@ platform :android do
     # 2. Upload
     supply(
       track: "alpha",
-      # Flutter outputs the AAB here:
       aab: "../build/app/outputs/bundle/release/app-release.aab",
+      mapping: "../build/app/outputs/mapping/release/mapping.txt",
+      version_code: sh("grep '^version:' ../../pubspec.yaml | sed 's/.*+//'").strip.to_i,
 
-      # We do NOT want to overwrite texts/images every time (saves time)
       skip_upload_metadata: true,
       skip_upload_images: true,
       skip_upload_screenshots: true,
+      skip_upload_changelogs: false,
 
-      # 'draft' for the first upload, later you can set this to 'completed'
       release_status: "draft"
     )
   end
@@ -67,7 +67,8 @@ platform :android do
       skip_upload_aab: true,
       skip_upload_metadata: false,
       skip_upload_images: false,
-      skip_upload_screenshots: false
+      skip_upload_screenshots: false,
+      skip_upload_changelogs: true
     )
   end
 
