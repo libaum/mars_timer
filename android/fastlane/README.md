@@ -1,55 +1,56 @@
-# fastlane documentation
-fastlane ist hier für die Automatisierung von Android-Deployments konfiguriert.
-## Installation
-```bash
-cd android
-bundle install
+fastlane documentation
+----
+
+# Installation
+
+Make sure you have the latest version of the Xcode command line tools installed:
+
+```sh
+xcode-select --install
 ```
-## Verfügbare Lanes
-### build
-Baut nur die Flutter Release AAB ohne Upload.
-```bash
-bundle exec fastlane build
+
+For _fastlane_ installation instructions, see [Installing _fastlane_](https://docs.fastlane.tools/#installing-fastlane)
+
+# Available Actions
+
+## Android
+
+### android alpha
+
+```sh
+[bundle exec] fastlane android alpha
 ```
-### alpha
-Baut eine neue Version und lädt sie in den Alpha-Track (Closed Testing) hoch.
-```bash
-bundle exec fastlane alpha
+
+Builds a new version and uploads it to the Alpha track (Closed Testing)
+
+### android release
+
+```sh
+[bundle exec] fastlane android release
 ```
-### release
-Promotet die getestete Alpha-Version direkt in den Store (Production).
-```bash
-bundle exec fastlane release
+
+Promotes the tested Alpha version directly to the Store (Production)
+
+### android metadata
+
+```sh
+[bundle exec] fastlane android metadata
 ```
-### metadata
-Aktualisiert NUR die Store-Einträge (Titel, Beschreibung, Bilder).
-```bash
-bundle exec fastlane metadata
+
+Updates ONLY the Store entries (Title, Description, Images)
+
+### android build
+
+```sh
+[bundle exec] fastlane android build
 ```
-## Voraussetzungen
-1. **Google Play Console API-Key**: Die Datei `pc-api.json` muss im `android/`-Verzeichnis liegen.
-2. **Keystore**: Die Datei `upload-keystore.jks` muss in `android/app/` liegen.
-3. **Key Properties**: Die Datei `key.properties` muss im `android/`-Verzeichnis liegen mit:
-   ```
-   storePassword=...
-   keyPassword=...
-   keyAlias=upload
-   storeFile=upload-keystore.jks
-   ```
-## Store Metadata
-Die Store-Texte und Screenshots befinden sich in:
-```
-android/fastlane/metadata/android/
-├── de-DE/
-│   ├── title.txt
-│   ├── short_description.txt
-│   ├── full_description.txt
-│   └── video.txt
-└── en-US/
-    ├── title.txt
-    ├── short_description.txt
-    ├── full_description.txt
-    ├── video.txt
-    └── images/
-        └── phoneScreenshots/
-```
+
+Builds the Flutter Release AAB without uploading
+
+----
+
+This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
+
+More information about _fastlane_ can be found on [fastlane.tools](https://fastlane.tools).
+
+The documentation of _fastlane_ can be found on [docs.fastlane.tools](https://docs.fastlane.tools).
