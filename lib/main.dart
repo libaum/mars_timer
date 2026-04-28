@@ -38,8 +38,11 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  // Enable edge-to-edge
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // Hide status bar, keep navigation bar
+  SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.manual,
+    overlays: [SystemUiOverlay.bottom],
+  );
 
   runApp(
     MarsTimerApp(
